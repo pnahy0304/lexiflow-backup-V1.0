@@ -1,0 +1,163 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Newsreader', Georgia, Cambria, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  --color-page-bg: #F6F8FC;
+  --color-card-border: #E6ECF5;
+  --color-primary: #4F46E5;
+  --color-primary-hover: #4338CA;
+  --color-primary-light: #EEF2FF;
+  --color-sidebar-bg: #F0F4FC;
+  --color-text-main: #0F172A;
+  --color-text-sub: #64748B;
+  --color-accent-amber: #D97706;
+  --color-accent-emerald: #059669;
+  --color-accent-indigo: #4F46E5;
+  --color-accent-rose: #E11D48;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    background-color: #F6F8FC;
+    color: #0F172A;
+    overflow-x: hidden;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+
+  /* Dark mode overrides */
+  body.dark-mode {
+    background-color: #0B0F19;
+    color: #F8FAFC;
+  }
+
+  body.dark-mode .bg-white {
+    background-color: #131B2E !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    color: #F8FAFC !important;
+  }
+
+  body.dark-mode .bg-\[\#F5F7FC\],
+  body.dark-mode .bg-\[\#F6F8FC\] {
+    background-color: #0B0F19 !important;
+  }
+
+  body.dark-mode .bg-\[\#EEF2FB\],
+  body.dark-mode .bg-\[\#F0F4FC\] {
+    background-color: #0F172A !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  body.dark-mode .text-\[\#1A2340\],
+  body.dark-mode .text-\[\#0F172A\] {
+    color: #F8FAFC !important;
+  }
+
+  body.dark-mode .text-\[\#6B7690\],
+  body.dark-mode .text-\[\#64748B\] {
+    color: #94A3B8 !important;
+  }
+}
+
+/* Craft Editorial Fonts */
+.font-serif-craft {
+  font-family: 'Newsreader', Georgia, serif;
+}
+
+.font-mono-craft {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Tactile Craft Elevation Shadows */
+.shadow-craft {
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03), 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.shadow-craft-hover {
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05), 0 12px 32px rgba(15, 23, 42, 0.08);
+}
+
+.shadow-indigo-glow {
+  box-shadow: 0 0 25px -5px rgba(79, 70, 229, 0.25);
+}
+
+/* Subtle Inner Glass Refraction */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(230, 236, 245, 0.8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 4px 20px rgba(15, 23, 42, 0.03);
+}
+
+/* Keyframes & Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(79, 70, 229, 0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pop-in {
+  animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2.5s infinite;
+}
+
+/* Tactile Physics for Interactive Elements */
+button, a, .clickable {
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+button:active, .clickable:active {
+  transform: scale(0.98);
+}
+
+/* Clean Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}

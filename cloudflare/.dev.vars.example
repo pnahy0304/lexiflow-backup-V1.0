@@ -1,0 +1,2 @@
+# Firebase Project ID used for JWT token verification
+FIREBASE_PROJECT_ID=vocabofinalapp

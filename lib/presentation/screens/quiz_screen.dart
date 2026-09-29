@@ -1,0 +1,420 @@
+import 'dart:math';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../core/theme/app_theme.dart';
+import '../../data/models/vocab_model.dart';
+import '../../services/cloudflare_service.dart';
+
+class QuizQuestion {
+  final Vocab targetVocab;
+  final List<String> options;
+  final int correctIndex;
+
+  QuizQuestion({
+    required this.targetVocab,
+    required this.options,
+    required this.correctIndex,
+  });
+}
+
+class QuizScreen extends StatefulWidget {
+  const QuizScreen({super.key});
+
+  @override
+  State<QuizScreen> createState() => _QuizScreenState();
+}
+
+class _QuizScreenState extends State<QuizScreen> {
+  bool _loading = true;
+  List<QuizQuestion> _questions = [];
+  int _currentIndex = 0;
+  int _score = 0;
+  int? _selectedOptionIndex;
+  bool _answered = false;
+
+  final List<Vocab> _fallbackVocabs = [
+    Vocab(id: '1', word: 'serendipity', meaning: 'sự tình cờ may mắn', example: 'Finding this was pure serendipity.'),
+    Vocab(id: '2', word: 'resilience', meaning: 'sự kiên cường, khả năng phục hồi', example: 'She showed great resilience.'),
+    Vocab(id: '3', word: 'eloquent', meaning: 'hùng hồn, lưu loát', example: 'He delivered an eloquent speech.'),
+    Vocab(id: '4', word: 'ephemeral', meaning: 'phù du, ngắn ngủi', example: 'Fame is ephemeral.'),
+    Vocab(id: '5', word: 'meticulous', meaning: 'tỉ mỉ, cẩn thận', example: 'He is meticulous in his research.'),
+    Vocab(id: '6', word: 'pragmatic', meaning: 'thực tế, thực dụng', example: 'We need a pragmatic solution.'),
+    Vocab(id: '7', word: 'ubiquitous', meaning: 'có mặt ở khắp nơi', example: 'Smartphones are ubiquitous today.'),
+    Vocab(id: '8', word: 'benevolent', meaning: 'nhân từ, rộng lượng', example: 'A benevolent smile.'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _generateQuiz();
+  }
+
+  Future<void> _generateQuiz() async {
+    setState(() {
+      _loading = true;
+      _questions = [];
+      _currentIndex = 0;
+      _score = 0;
+      _selectedOptionIndex = null;
+      _answered = false;
+    });
+
+    List<Vocab> vocabs = [];
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      try {
+        final cloudflareService = context.read<CloudflareService>();
+        vocabs = await cloudflareService.getSpacedRepetitionVocabs(uid);
+      } catch (_) {}
+    }
+
+    if (vocabs.length < 4) {
+      vocabs = List.from(_fallbackVocabs);
+    } else {
+      vocabs.shuffle();
+    }
+
+    final random = Random();
+    final List<QuizQuestion> generatedQuestions = [];
+    final int count = min(10, vocabs.length);
+
+    for (int i = 0; i < count; i++) {
+      final target = vocabs[i];
+      final List<String> distractors = [];
+      
+      // Get random distractors from other vocabs
+      final availableDistractors = vocabs.where((v) => v.meaning != target.meaning).map((v) => v.meaning).toList();
+      availableDistractors.shuffle(random);
+
+      while (distractors.length < 3 && availableDistractors.isNotEmpty) {
+        distractors.add(availableDistractors.removeLast());
+      }
+      while (distractors.length < 3) {
+        distractors.add('Nghĩa chưa cập nhật ${distractors.length + 1}');
+      }
+
+      final List<String> options = [target.meaning, ...distractors];
+      options.shuffle(random);
+      final int correctIdx = options.indexOf(target.meaning);
+
+      generatedQuestions.add(QuizQuestion(
+        targetVocab: target,
+        options: options,
+        correctIndex: correctIdx,
+      ));
+    }
+
+    if (mounted) {
+      setState(() {
+        _questions = generatedQuestions;
+        _loading = false;
+      });
+    }
+  }
+
+  void _selectOption(int index) {
+    if (_answered) return;
+
+    setState(() {
+      _selectedOptionIndex = index;
+      _answered = true;
+      if (index == _questions[_currentIndex].correctIndex) {
+        _score++;
+      }
+    });
+  }
+
+  void _nextQuestion() {
+    if (_currentIndex < _questions.length - 1) {
+      setState(() {
+        _currentIndex++;
+        _selectedOptionIndex = null;
+        _answered = false;
+      });
+    } else {
+      setState(() {
+        _currentIndex++; // Triggers finished state
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = AppTheme.textColor(context);
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(
+        title: Text(
+          'Trắc Nghiệm Từ Vựng',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: textColor),
+        ),
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _questions.isEmpty
+              ? Center(child: Text('Không đủ từ vựng để tạo bài thi.', style: GoogleFonts.outfit(color: textColor)))
+              : _currentIndex >= _questions.length
+                  ? _buildResultScreen()
+                  : _buildQuizContent(),
+    );
+  }
+
+  Widget _buildQuizContent() {
+    final currentQ = _questions[_currentIndex];
+
+    final cardColor = AppTheme.cardColor(context);
+    final textColor = AppTheme.textColor(context);
+    final subTextColor = AppTheme.subTextColor(context);
+    final borderColor = AppTheme.borderColor(context);
+    final primaryColor = AppTheme.primaryColor(context);
+
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Progress bar
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Câu ${_currentIndex + 1} / ${_questions.length}',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: subTextColor),
+              ),
+              Text(
+                'Điểm: $_score',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: primaryColor, fontSize: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: (_currentIndex + 1) / _questions.length,
+              backgroundColor: borderColor,
+              valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+              minHeight: 8,
+            ),
+          ),
+          const SizedBox(height: 28),
+
+          // Question Card (Theme Aware)
+          Container(
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: borderColor, width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: AppTheme.isDark(context) ? 0.2 : 0.03),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                )
+              ],
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'Từ này có nghĩa là gì?',
+                  style: GoogleFonts.outfit(fontSize: 14, color: subTextColor),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  currentQ.targetVocab.word,
+                  style: GoogleFonts.outfit(
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Options List
+          Expanded(
+            child: ListView.separated(
+              itemCount: currentQ.options.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final optionText = currentQ.options[index];
+                Color optionBg = cardColor;
+                Color optionTextColor = textColor;
+                Color optionBorder = borderColor;
+                IconData? icon;
+
+                if (_answered) {
+                  if (index == currentQ.correctIndex) {
+                    optionBg = AppTheme.successGreen.withValues(alpha: AppTheme.isDark(context) ? 0.25 : 0.12);
+                    optionTextColor = AppTheme.successGreen;
+                    optionBorder = AppTheme.successGreen;
+                    icon = Icons.check_circle_rounded;
+                  } else if (index == _selectedOptionIndex) {
+                    optionBg = AppTheme.errorRed.withValues(alpha: AppTheme.isDark(context) ? 0.25 : 0.12);
+                    optionTextColor = AppTheme.errorRed;
+                    optionBorder = AppTheme.errorRed;
+                    icon = Icons.cancel_rounded;
+                  }
+                }
+
+                return InkWell(
+                  onTap: () => _selectOption(index),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    decoration: BoxDecoration(
+                      color: optionBg,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: optionBorder,
+                        width: _answered && (index == currentQ.correctIndex || index == _selectedOptionIndex) ? 2 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            optionText,
+                            style: GoogleFonts.outfit(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: optionTextColor,
+                            ),
+                          ),
+                        ),
+                        if (icon != null) Icon(icon, color: optionTextColor),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          if (_answered)
+            Padding(
+              padding: const EdgeInsets.only(top: 12.0),
+              child: ElevatedButton(
+                onPressed: _nextQuestion,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: Text(
+                  _currentIndex < _questions.length - 1 ? 'Câu tiếp theo' : 'Xem kết quả',
+                  style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultScreen() {
+    final double percentage = (_score / _questions.length) * 100;
+    String feedback = 'Cố gắng hơn nữa nhé!';
+    if (percentage >= 80) {
+      feedback = 'Xuất sắc! Bạn đã nhớ rất tốt. 🎉';
+    } else if (percentage >= 50) {
+      feedback = 'Khá tốt! Hãy ôn lại các từ chưa thuộc. 👍';
+    }
+
+    final cardColor = AppTheme.cardColor(context);
+    final textColor = AppTheme.textColor(context);
+    final subTextColor = AppTheme.subTextColor(context);
+    final primaryColor = AppTheme.primaryColor(context);
+
+    return Padding(
+      padding: const EdgeInsets.all(28.0),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: cardColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: primaryColor.withValues(alpha: 0.3), width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryColor.withValues(alpha: 0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  )
+                ],
+              ),
+              child: Icon(
+                percentage >= 80 ? Icons.emoji_events_rounded : Icons.stars_rounded,
+                size: 72,
+                color: primaryColor,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Hoàn Thành Bài Kiểm Tra!',
+              style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: textColor),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              feedback,
+              style: GoogleFonts.outfit(fontSize: 14, color: subTextColor),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              '$_score / ${_questions.length}',
+              style: GoogleFonts.outfit(fontSize: 48, fontWeight: FontWeight.bold, color: primaryColor),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              decoration: BoxDecoration(
+                color: primaryColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${percentage.round()}% Chính xác',
+                style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: primaryColor),
+              ),
+            ),
+            const SizedBox(height: 40),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _generateQuiz,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: const Text('Thi lại'),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: const Text('Về Trang Chủ'),
+                  ),
+                ),
+              ],
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+

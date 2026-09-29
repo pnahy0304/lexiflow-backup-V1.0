@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1060637668034",
+    "project_id": "vocabofinalapp",
+    "storage_bucket": "vocabofinalapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1060637668034:android:1251eee3136c33b6de015b",
+        "android_client_info": {
+          "package_name": "com.vocabo.vocabofinalapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1060637668034-r3go25eg8bb8nl1rsenugp6d573l51dl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.vocabo.vocabofinalapp",
+            "certificate_hash": "96fffc718c568a65f6c32e46b131d9009f98ccb1"
+          }
+        },
+        {
+          "client_id": "1060637668034-1o87o6qune23elgh52rht5ch4m7dmt1f.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCE_EkRXT8ELuaxV9B3JawZmZr-SGZYPd0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1060637668034-1o87o6qune23elgh52rht5ch4m7dmt1f.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

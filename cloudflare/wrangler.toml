@@ -1,0 +1,27 @@
+name = "lexiflow-api"
+main = "src/index.ts"
+compatibility_date = "2025-07-01"
+
+# D1 Database bindings
+[[d1_databases]]
+binding = "DB"
+database_name = "lexiflow-db"
+database_id = "f3118b55-439b-472f-9ab6-7748cc5df154"
+
+# Environment variables
+[vars]
+FIREBASE_PROJECT_ID = "vocabofinalapp"
+
+# Production environment
+[env.production]
+[env.production.vars]
+FIREBASE_PROJECT_ID = "vocabofinalapp"
+
+# Development environment (local)
+[env.development]
+[[env.development.d1_databases]]
+binding = "DB"
+database_name = "lexiflow-db-dev"
+database_id = "f3118b55-439b-472f-9ab6-7748cc5df154"
+[env.development.vars]
+FIREBASE_PROJECT_ID = "vocabofinalapp"
